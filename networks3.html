@@ -13,15 +13,15 @@
 	<link href="css/main.css" rel="stylesheet">
 	<link href="css/fonts.css" rel="stylesheet">
 	<style>
-			.node {
-			    fill: #ccc;
-			    stroke: #fff;
+			.nodes {
+			    fill: rgb(199, 116, 192);
+			    stroke: rgb(182, 192, 186);
 			    stroke-width: 2px;
 			}
 
 			.link {
-					stroke: #999;
-					stroke-opacity: 0.3;
+					stroke: #ccb1cc;
+					stroke-opacity: 0.2;
 			}
     </style>
 </head>
@@ -43,7 +43,7 @@
 			<li><a href="networks4.html">4</a></li>
 		</ol>
 		<header>
-			<h1>A preferida do Brasil</h1>
+			<h1>O melhor do jazz</h1>
 		</header>
 
 		<div id="chart"></div>
@@ -90,10 +90,13 @@
 		var simulation = d3.forceSimulation()
 		    .force("link", d3.forceLink().id(function(d) { return d.id; }))
 		    .force("charge", d3.forceManyBody())
+			.force("colisao", d3.forceCollide([15]))
 		    .force("center", d3.forceCenter(width / 2, height / 2));
 
-		d3.json("artistas-semelhantes.json", function(error, graph) {
+		d3.json("chetBaker.json", function(error, graph) {
 		  if (error) throw error;
+
+			filterNotSoPopulars(graph);
 
 			console.dir(graph.edges);
 			console.dir(graph.nodes);
@@ -109,8 +112,8 @@
 		    .selectAll("circle")
 		    	.data(graph.nodes)
 		    .enter().append("circle")
-		      .attr("r", 5)
-		      .attr("fill", function(d) { return color(d.group); })
+		      .attr("r", (d) => d.size/5)
+		      .attr("fill", (d) => d.label == "Chet Baker" ? "#551A8B" : "#03656d")
 		      .call(d3.drag()
 		          .on("start", dragstarted)
 		          .on("drag", dragged)
@@ -154,6 +157,17 @@
 		  if (!d3.event.active) simulation.alphaTarget(0);
 		  d.fx = null;
 		  d.fy = null;
+		}
+
+		function filterNotSoPopulars(graph){
+			let removed = [];
+			graph.nodes = graph.nodes.filter(elem => {
+				if(elem.size > 45)return true;
+				removed.push(elem.id);
+				return false;
+			});
+			graph.edges = graph.edges.filter(elem => removed.indexOf(elem.source) === -1 && removed.indexOf(elem.target) === -1);
+			return graph;
 		}
 
 </script>
