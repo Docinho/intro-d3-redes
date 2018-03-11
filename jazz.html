@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+	<link rel="icon" href="/favicon.ico" type="image/x-icon">
+	<title>D3</title>
+
+	<link href="https://fonts.googleapis.com/css?family=Open+Sans|Roboto+Slab" rel="stylesheet">
+	<link href="css/bootstrap.min.css" rel="stylesheet">
+	<link href="css/main.css" rel="stylesheet">
+	<link href="css/fonts.css" rel="stylesheet">
+	<style>
+			.nodes {
+			    stroke: rgb(182, 192, 186);
+			    stroke-width: 2.5px;
+			}
+
+			.link {
+            	stroke: #d6b6d6;
+				stroke-opacity: 0.2;
+			}
+	</style>
+</head>
+<body>
+
+	<div class="container">
+
+		<div class="header">
+			<div class="row">
+				<div class="col-xs-10">
+					<h1>O melhor do jazz</h1>
+				</div>
+			</div>
+		</div>
+		
+		<div id="chart"></div>
+
+		<div class="section">
+
+			<div class="row">
+				<div class="col-md-8">
+                    <p>O grafo possui alguns dos maiores artistas de jazz mapeados a partir do trompetista Chet Baker, destacado em roxo. Mesmo ele sendo escolhido 
+                        para listar os outros nós percebe-se que Louis Armstrong e Stan Getz são pontes mais importantes para o grupo inferior e direito, respectivamente.</p>
+                    <p>Mesmo filtrando os artistas mais populares, escolheu-se também transmitir essa informação pelo tamanho dos nós para facilitar a leitura e a 
+                        procura pelos artistas mais famosos. Além disso, é fácil encontrar algumas surpresas dependendo da visão de mundo do leitor, já quer alguns 
+                        artistas mais valorizados pela mídia podem ser, por vezes, menos populares que alguns outros.</p>
+                    <p>Foi priorizada, na configuração do grafo, a visualização de grupos. Podem ser identificados três com facilidade. O grupo superior, ao qual 
+                        Chet Baker é mais ligado é característico de um jazz mais tradicional, mais forte e menos popular, ao contrário do grupo inferior que possui 
+                        músicas mais melódicas e apreciadas pelo "grande público". O grupo inferior tem os artistas mais populares como Nina Simone, Ella Fitzgerald, 
+                        Madeleine Peyroux e Billie Holliday, por exemplo. Já o superior possui mais instrumentistas bem avaliados pela crítica como John Coltrane, 
+                        Duke Ellington e Bill Evans. Louis Armstrons, Count Basie e Glenn Miller são parte de um subgrupo que compartilha características dos dois
+                        conjuntos de artistas anteriores e formam, portanto, uma transição.</p>
+                    <p>Já o grupo restante e menos numeroso são os artistas da MPB. As pontes entre os outros grupos são Charlie Byrd, Liz Bonfá e Astrud Gilberto que divulgavam
+                        músicas brasileiras. Aqui tem-se Antonio Carlos Jobim, Vinícius de Moraes, Caetano Veloso, Chico Buarque, Gal Costa, Gilberto Gil, por vezes
+                        lembrados como "guardiões" da boa música do país.
+                    </p>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<footer></footer>
+
+	<!-- scripts -->
+	<script src="js/d3.v4.min.js"></script>
+	<script>
+		var
+		    width = 1000,
+		    height = 1000;
+
+		var svg = d3.select("#chart")
+				.append("svg")
+				.attr('version', '1.1')
+				.attr('viewBox', '0 0 '+width+' '+height)
+				.attr('width', '100%');
+
+		var color = d3.scaleOrdinal(d3.schemeCategory20);
+
+		var simulation = d3.forceSimulation()
+		    .force("link", d3.forceLink().id(function(d) { return d.id; }))
+		    .force("charge", d3.forceManyBody())
+			.force("colisao", d3.forceCollide([15]))
+		    .force("center", d3.forceCenter(width / 2, height / 2));
+
+		d3.json("chetBaker.json", function(error, graph) {
+		  if (error) throw error;
+
+			filterNotSoPopulars(graph);
+
+			console.dir(graph.edges);
+			console.dir(graph.nodes);
+
+		  var link = svg.append("g")
+		      .attr("class", "link")
+		    .selectAll("line")
+		    	.data(graph.edges)
+		    .enter().append("line");
+
+		  var node = svg.append("g")
+		      .attr("class", "nodes")
+		    .selectAll("circle")
+		    	.data(graph.nodes)
+		    .enter().append("circle")
+		      .attr("r", (d) => d.size/5)
+		      .attr("fill", (d) => d.label == "Chet Baker" ? "#551A8B" : "#03656d")
+		      .call(d3.drag()
+		          .on("start", dragstarted)
+		          .on("drag", dragged)
+		          .on("end", dragended));
+
+		  node.append("title")
+		      .text(function(d) { return d.label; });
+
+		  simulation
+		      .nodes(graph.nodes)
+		      .on("tick", ticked);
+
+		  simulation.force("link")
+		      .links(graph.edges);
+
+		  function ticked() {
+		    link
+		        .attr("x1", function(d) { return d.source.x; })
+		        .attr("y1", function(d) { return d.source.y; })
+		        .attr("x2", function(d) { return d.target.x; })
+		        .attr("y2", function(d) { return d.target.y; });
+
+		    node
+		        .attr("cx", function(d) { return d.x; })
+		        .attr("cy", function(d) { return d.y; });
+		  }
+		});
+
+		function dragstarted(d) {
+		  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+		  d.fx = d.x;
+		  d.fy = d.y;
+		}
+
+		function dragged(d) {
+		  d.fx = d3.event.x;
+		  d.fy = d3.event.y;
+		}
+
+		function dragended(d) {
+		  if (!d3.event.active) simulation.alphaTarget(0);
+		  d.fx = null;
+		  d.fy = null;
+		}
+
+		function filterNotSoPopulars(graph){
+			let removed = [];
+			graph.nodes = graph.nodes.filter(elem => {
+				if(elem.size > 45)return true;
+				removed.push(elem.id);
+				return false;
+			});
+			graph.edges = graph.edges.filter(elem => removed.indexOf(elem.source) === -1 && removed.indexOf(elem.target) === -1);
+			return graph;
+		}
+
+</script>
+
+</body>
+</html>
